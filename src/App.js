@@ -7,20 +7,20 @@ const greeterAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
 
 
 function App() {
-  const [greeting, setGreetingValue] = useState()
+  const [greeting, setGreetingValue] = useState('')
   
   //These are asynchronous functions cuz these guys neet to await for returning some value.
   
   async function requestAccount() { //requesAccount is going to get connected with metamask wallet of the user when we need to create a transaction.
-    
+    await window.ethereum.request({method: 'eth_requestAccounts'}) //requests account information from user's metamask wallet
   }
 
   async function fetchGreeting() { 
     if (typeof window.ethereum !== 'undefined') { //checks whether the metamask is present in the system or not
       const provider = new ethers.providers.Web3Provider(window.ethereum)
-      const contract = new ethers.Contract(greetAddress, Greeter.abi, provider) 
+      const contract = new ethers.Contract(greeterAddress, Greeter.abi, provider) 
       try {
-        const data = await contract.great() //value we are reading from the blockchain
+        const data = await contract.greet() //value we are reading from the blockchain
         console.log('data',data)
       }catch(err) {
         console.log("Error: ", err)
@@ -34,7 +34,20 @@ function App() {
   }
 
   async function setGreeting() {
+    if(!greeting) return
+    if(typeof window.ethereum !== 'undefined') {
+      await requestAccount()
+      const provider = new ethers.providers.Web3Provider(window.ethereum)
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(greeterAddress, Greeter.abi, signer)
+      const transaction = await contract.setGreeting(greeting)
+      setGreetingValue('')
+      await transaction.wait() //waiting for transaction to be complete on the blockchain
+      fetchGreeting()
 
+
+
+    }
   }
 
 
@@ -42,18 +55,13 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+        <button onClick = {fetchGreeting}>Fetch Greeting</button>
+        <button onClick = {setGreeting}>Set Greeting</button>
+        <input
+          onChange= {e => setGreetingValue(e.target.value)}
+          placeholder="set greeting"
+          value={greeting}
+          />
       </header>
     </div>
   );
